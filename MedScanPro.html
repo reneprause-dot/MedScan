@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>MedScan Pro – Pharma Inventur</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:#0A1628;color:#E2EBF8;min-height:100vh;display:flex;flex-direction:column}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:#071020}::-webkit-scrollbar-thumb{background:#1E3A5F;border-radius:3px}
+input:focus,select:focus{outline:2px solid #38BDF8;outline-offset:1px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@keyframes sline{0%,100%{top:8%}50%{top:90%}}
+
+/* Header */
+#hdr{background:linear-gradient(135deg,#0D1F3C,#091E38);border-bottom:1px solid #162C50;padding:13px 18px;display:flex;align-items:center;gap:12px}
+#hdr-logo{width:38px;height:38px;background:linear-gradient(135deg,#1d4ed8,#06B6D4);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+#hdr-count{text-align:right;margin-left:auto}
+#hdr-count small{font-size:9px;color:#60A5FA;text-transform:uppercase;display:block}
+#hdr-count b{font-size:24px;font-weight:900;color:#38BDF8;line-height:1}
+
+/* Tabs */
+#tabs{display:flex;background:#0D1F3C;border-bottom:1px solid #162C50}
+.tab{padding:10px 20px;cursor:pointer;font-size:13px;font-weight:600;color:#64748B;border-bottom:2px solid transparent;transition:all .15s;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.tab.active{color:#38BDF8;border-bottom-color:#38BDF8}
+.badge-tab{background:#0284C7;color:#fff;border-radius:10px;padding:0 7px;font-size:11px}
+
+/* Body */
+#body{flex:1;padding:14px;max-width:960px;margin:0 auto;width:100%}
+.page{display:none}.page.active{display:block}
+
+/* Cards */
+.card{background:#0F2544;border:1px solid #1E3A5F;border-radius:13px;padding:16px;margin-bottom:14px}
+.card-title{font-weight:700;color:#F0F9FF;font-size:13px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.lbl{font-size:10px;color:#38BDF8;font-weight:700;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.5px;display:block}
+
+/* Buttons */
+.btn{background:#1d4ed8;color:#fff;border:none;border-radius:9px;padding:9px 16px;cursor:pointer;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:7px;white-space:nowrap;transition:opacity .15s}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.green{background:#059669}
+.btn.red{background:#3B1F1F;color:#fca5a5}
+.btn.teal{background:#0369A1}
+.btn-sm{background:#1E3A5F;color:#E2EBF8;border:1px solid #2A4A7A;border-radius:7px;padding:3px 10px;cursor:pointer;font-size:12px;display:inline-flex;align-items:center;gap:4px}
+
+/* Input */
+.inp{background:#071020;border:1px solid #1E3A5F;border-radius:7px;color:#E2EBF8;padding:7px 9px;font-size:13px;width:100%}
+.inp-lg{font-size:22px;font-weight:800;color:#38BDF8;text-align:center;background:#071020;border:1px solid #1E3A5F;border-radius:7px;color:#38BDF8;width:100%;padding:6px}
+
+/* Modus */
+.mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:14px}
+.mode-btn{padding:14px 8px;border-radius:10px;border:2px solid #1E3A5F;background:#071020;cursor:pointer;color:#64748B;text-align:center;transition:all .2s;font-family:inherit}
+.mode-btn.active{border-color:#38BDF8;background:#0C2A46;color:#E2EBF8}
+.mode-btn .mode-ico{font-size:22px;margin-bottom:4px}
+.mode-btn .mode-name{font-weight:700;font-size:13px}
+.mode-btn .mode-desc{font-size:11px;color:#64748B;margin-top:2px}
+
+/* Status-Steps */
+#status-box{border-radius:10px;padding:12px;margin-bottom:14px;animation:fi .3s;display:none}
+#status-box.show{display:block}
+.steps{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.step-item{display:flex;align-items:center;gap:6px;opacity:.3}
+.step-item.active,.step-item.done{opacity:1}
+.step-dot{width:20px;height:20px;border-radius:50%;background:#1E3A5F;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+.step-dot.active{background:#38BDF8}
+.step-dot.done{background:#22c55e}
+.step-label{font-size:12px;font-weight:500}
+.step-arrow{color:#1E3A5F;font-size:14px}
+.status-msg{display:flex;align-items:center;gap:9px;padding:9px 12px;background:#071020;border-radius:8px;font-size:13px;font-weight:600}
+
+/* Camera */
+#cam-wrap{position:relative;background:#030B16;border-radius:11px;overflow:hidden;aspect-ratio:16/9;border:1px solid #1E3A5F;margin-bottom:11px}
+#cam-wrap video{width:100%;display:block;object-fit:cover}
+#scan-line{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#38BDF8,transparent);animation:sline 2s ease-in-out infinite;box-shadow:0 0 8px #38BDF8;display:none}
+#cam-overlay{position:absolute;inset:0;background:rgba(3,10,22,.82);display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+#cam-idle{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+
+/* Upload */
+.upload-zone{border:2px dashed #1E3A5F;border-radius:11px;padding:34px;text-align:center;cursor:pointer;transition:all .2s;position:relative}
+.upload-zone.masse{border-color:#1E5A35;background:#071A0F}
+.upload-zone:hover{border-color:#38BDF8}
+.upload-zone.busy{cursor:default}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-zone input:disabled{cursor:default}
+.upload-preview{margin-top:12px;border-radius:9px;overflow:hidden;border:1px solid #1E3A5F;max-height:130px;display:none}
+.upload-preview img{width:100%;max-height:130px;object-fit:contain;display:block;background:#000}
+
+/* Spinner */
+.spinner{width:20px;height:20px;border:2px solid #38BDF830;border-top-color:#38BDF8;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+.spinner.green{border-color:#4ADE8030;border-top-color:#4ADE80}
+.spinner.lg{width:36px;height:36px;border-width:3px}
+
+/* API-Key */
+#key-box{background:#071A0F;border:1px solid #1E5A35;border-radius:10px;padding:14px;margin-bottom:14px}
+#key-row{display:flex;gap:8px;align-items:center}
+#key-input{flex:1;font-family:monospace;letter-spacing:1px}
+#key-status{font-size:11px;margin-top:6px}
+
+/* Meta grid */
+.meta-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:9px}
+
+/* Table */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{padding:8px 9px;text-align:left;font-weight:600;font-size:10px;text-transform:uppercase;color:#60A5FA;border-bottom:1px solid #1E3A5F;white-space:nowrap;background:#071020}
+td{padding:8px 9px;border-bottom:1px solid #0F1E30;vertical-align:middle}
+tr:nth-child(even){background:#071020}
+.badge{border-radius:5px;padding:2px 8px;font-size:11px;font-weight:600}
+.badge-hoch{background:#22c55e22;color:#22c55e;border:1px solid #22c55e44}
+.badge-mittel{background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b44}
+.badge-niedrig{background:#ef444422;color:#ef4444;border:1px solid #ef444444}
+
+/* Modal */
+#modal{position:fixed;inset:0;background:#000C;z-index:1000;display:none;align-items:center;justify-content:center;padding:16px}
+#modal.show{display:flex}
+#modal-box{background:#0F2544;border:1px solid #1E3A5F;border-radius:16px;max-width:520px;width:100%;max-height:92vh;overflow-y:auto;animation:fi .2s}
+.modal-hdr{padding:16px 20px;border-bottom:1px solid #1E3A5F;display:flex;justify-content:space-between;align-items:center}
+.modal-body{padding:20px}
+
+/* Toggle */
+.toggle{width:40px;height:22px;background:#1E3A5F;border-radius:11px;position:relative;cursor:pointer;border:none;transition:background .2s;flex-shrink:0}
+.toggle.on{background:#0284C7}
+.toggle-dot{position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;top:3px;left:3px;transition:left .2s}
+.toggle.on .toggle-dot{left:21px}
+
+/* Alert boxes */
+.alert{border-radius:8px;padding:10px 13px;font-size:13px;margin-bottom:10px;animation:fi .3s}
+.alert-warn{background:#f59e0b12;border:1px solid #f59e0b40;color:#f59e0b}
+.alert-ok{background:#22c55e12;border:1px solid #22c55e40;color:#22c55e}
+.alert-err{background:#ef444412;border:1px solid #ef444440;color:#fca5a5}
+.alert-info{background:#38BDF812;border:1px solid #38BDF840;color:#38BDF8}
+
+/* Footer row */
+.sum-row td{font-weight:900;color:#38BDF8;font-size:18px;border-top:2px solid #1E3A5F}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div id="hdr">
+  <div id="hdr-logo">💊</div>
+  <div>
+    <div style="font-size:17px;font-weight:800;color:#F0F9FF">MedScan Pro</div>
+    <div style="font-size:11px;color:#60A5FA">Pharma-Inventur & Zählblatt</div>
+  </div>
+  <div id="hdr-count" style="display:none;margin-left:auto">
+    <small>Packungen</small>
+    <b id="total-count">0</b>
+  </div>
+  <button class="btn green" id="btn-export" style="display:none;margin-left:10px" onclick="exportExcel()">📥 Zählblatt</button>
+</div>
+
+<!-- Tabs -->
+<div id="tabs">
+  <div class="tab active" onclick="showTab('scan')">🔍 Scanner</div>
+  <div class="tab" onclick="showTab('zaehlblatt')">📋 Zählblatt <span class="badge-tab" id="zeilen-count" style="display:none">0</span></div>
+</div>
+
+<!-- Body -->
+<div id="body">
+
+<!-- ═══ SCANNER ═══ -->
+<div id="page-scan" class="page active">
+
+  <!-- API Key -->
+  <div id="key-box">
+    <div class="card-title">🔑 Anthropic API-Key</div>
+    <div id="key-row">
+      <input class="inp" id="key-input" type="password" placeholder="sk-ant-api03-..." oninput="saveKey(this.value)">
+      <button class="btn" onclick="testApi()">🔌 Testen</button>
+    </div>
+    <div id="key-status"></div>
+    <div style="font-size:11px;color:#475569;margin-top:6px">
+      API-Key unter <strong style="color:#60A5FA">console.anthropic.com</strong> → API Keys erstellen. Wird nur lokal gespeichert.
+    </div>
+  </div>
+
+  <!-- Status-Box -->
+  <div id="status-box">
+    <div class="steps" id="steps-row">
+      <div class="step-item" id="step1"><div class="step-dot">1</div><span class="step-label">Bild laden</span></div>
+      <span class="step-arrow">→</span>
+      <div class="step-item" id="step2"><div class="step-dot">2</div><span class="step-label">KI analysiert</span></div>
+      <span class="step-arrow">→</span>
+      <div class="step-item" id="step3"><div class="step-dot">3</div><span class="step-label">Fertig</span></div>
+    </div>
+    <div class="status-msg" id="status-msg"></div>
+  </div>
+
+  <!-- Modus -->
+  <div class="mode-grid">
+    <button class="mode-btn active" id="btn-einzel" onclick="setMode('einzel')">
+      <div class="mode-ico">🔍</div>
+      <div class="mode-name">Einzelpackung</div>
+      <div class="mode-desc">1 Packung scannen</div>
+    </button>
+    <button class="mode-btn" id="btn-masse" onclick="setMode('masse')">
+      <div class="mode-ico">📦</div>
+      <div class="mode-name">Massenerfassung</div>
+      <div class="mode-desc">Ganzen Karton zählen</div>
+    </button>
+  </div>
+
+  <!-- Kamera -->
+  <div class="card">
+    <div class="card-title">📷 Kamera
+      <div style="margin-left:auto;display:flex;align-items:center;gap:8px" id="live-toggle-wrap" style="display:none">
+        <span style="font-size:11px;color:#64748B">Auto (5s)</span>
+        <button class="toggle" id="live-toggle" onclick="toggleLive()"><div class="toggle-dot"></div></button>
+      </div>
+    </div>
+    <div id="cam-wrap">
+      <video id="video" autoplay muted playsinline></video>
+      <div id="scan-line"></div>
+      <div id="cam-idle"><div style="font-size:34px;margin-bottom:6px">📷</div><div style="color:#64748B;font-size:13px">Kamera noch nicht aktiv</div></div>
+      <div id="cam-overlay">
+        <div class="spinner lg green" id="cam-spinner"></div>
+        <div id="cam-msg" style="font-size:13px;font-weight:700;color:#38BDF8"></div>
+      </div>
+    </div>
+    <div id="cam-err" class="alert alert-err" style="display:none;margin-top:8px"></div>
+    <div style="display:flex;gap:9px;margin-top:11px;flex-wrap:wrap">
+      <button class="btn" id="btn-cam-start" onclick="startCam()">📷 Kamera starten</button>
+      <button class="btn teal" id="btn-cam-scan" style="display:none" onclick="camScan()">📸 Scannen</button>
+      <button class="btn red" id="btn-cam-stop" style="display:none" onclick="stopCam()">⏹</button>
+    </div>
+  </div>
+
+  <!-- Upload -->
+  <div class="card">
+    <div class="card-title">
+      🖼️ Foto hochladen
+      <span style="font-size:11px;color:#4ADE80;background:#4ADE8015;padding:2px 8px;border-radius:5px;font-weight:500;margin-left:4px">✓ Empfohlen</span>
+    </div>
+    <div class="upload-zone" id="upload-zone">
+      <input type="file" accept="image/*" id="file-input" onchange="handleFile(event)">
+      <div id="upload-content">
+        <div style="font-size:34px;margin-bottom:8px" id="upload-ico">🖼️</div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:3px" id="upload-title">Packungsfoto auswählen</div>
+        <div style="font-size:12px;color:#64748B;margin-bottom:12px" id="upload-desc">JPG, PNG, WEBP – tippen oder klicken</div>
+        <span style="background:#1E3A5F;color:#94A3B8;border-radius:7px;padding:6px 16px;font-size:12px;font-weight:600">Datei auswählen</span>
+      </div>
+    </div>
+    <div class="upload-preview" id="upload-preview">
+      <img id="preview-img" src="" alt="">
+    </div>
+  </div>
+
+</div><!-- /page-scan -->
+
+<!-- ═══ ZÄHLBLATT ═══ -->
+<div id="page-zaehlblatt" class="page">
+  <div class="card">
+    <div class="card-title">📋 Kopfdaten</div>
+    <div class="meta-grid" id="meta-grid"></div>
+  </div>
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="card-title" style="margin:0">📦 Charge-Zeilen</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="showTab('scan')">+ Scannen</button>
+        <button class="btn green" id="btn-export2" style="display:none" onclick="exportExcel()">📥 Excel</button>
+      </div>
+    </div>
+    <div id="zeilen-empty" style="text-align:center;padding:40px 16px">
+      <div style="font-size:36px;margin-bottom:9px">🔬</div>
+      <div style="color:#64748B;font-size:13px">Noch keine Packungen erfasst</div>
+      <button class="btn" style="margin-top:12px" onclick="showTab('scan')">Zum Scanner</button>
+    </div>
+    <div class="tbl-wrap" id="zeilen-table-wrap" style="display:none">
+      <table>
+        <thead><tr><th>#</th><th>Produkt</th><th>Charge</th><th>Verfall</th><th>Anz/K.</th><th>Summe</th><th>Qlt.</th><th>Bem.</th><th></th></tr></thead>
+        <tbody id="zeilen-tbody"></tbody>
+        <tfoot><tr class="sum-row"><td colspan="5" style="font-size:11px;font-weight:700;color:#60A5FA;padding:8px">GESAMT</td><td id="sum-cell" style="text-align:center;padding:8px"></td><td colspan="3"></td></tr></tfoot>
+      </table>
+    </div>
+  </div>
+</div><!-- /page-zaehlblatt -->
+
+</div><!-- /body -->
+
+<!-- Modal: Massenerfassung -->
+<div id="modal">
+  <div id="modal-box">
+    <div class="modal-hdr">
+      <div><div style="font-size:15px;font-weight:700;color:#F0F9FF">📦 Massenerfassung – Ergebnis</div><div style="font-size:12px;color:#60A5FA;margin-top:1px">Menge prüfen und bestätigen</div></div>
+      <button style="background:none;border:none;color:#64748B;cursor:pointer;font-size:22px" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <img id="modal-preview" src="" style="width:100%;max-height:110px;object-fit:cover;border-radius:9px;border:1px solid #1E3A5F;margin-bottom:12px;display:none">
+      <div id="modal-zaehlung" style="margin-bottom:12px"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div>
+          <label class="lbl">Gesamtanzahl</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button style="width:32px;height:32px;background:#1E3A5F;border:1px solid #2A4A7A;border-radius:7px;color:#E2EBF8;font-size:20px;cursor:pointer" onclick="adjSumme(-1)">−</button>
+            <input type="number" class="inp-lg" id="modal-summe" value="0" min="0">
+            <button style="width:32px;height:32px;background:#1E3A5F;border:1px solid #2A4A7A;border-radius:7px;color:#E2EBF8;font-size:20px;cursor:pointer" onclick="adjSumme(1)">+</button>
+          </div>
+          <div style="font-size:11px;color:#475569;margin-top:3px">KI zählte: <span id="modal-ki-count">-</span></div>
+        </div>
+        <div>
+          <label class="lbl">Anz. pro Karton</label>
+          <input type="number" class="inp" id="modal-pro" value="0" min="0">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+        <div><label class="lbl">Charge</label><input class="inp" id="modal-charge" placeholder="Chargennummer"></div>
+        <div><label class="lbl">Verfall (MM/YYYY)</label><input class="inp" id="modal-verfall" placeholder="07/2030"></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn-sm" onclick="closeModal()">Abbrechen</button>
+        <button class="btn green" onclick="confirmMasse()">✅ Übernehmen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── State ─────────────────────────────────────────────────────────────────
+let apiKey = localStorage.getItem('medscan_key') || '';
+let mode = 'einzel';
+let busy = false;
+let camStream = null;
+let liveInterval = null;
+let liveOn = false;
+let pendingMasse = null;
+let pendingMassePrev = null;
+let zeilen = [];
+let meta = {
+  we_datum: new Date().toLocaleDateString('de-DE'),
+  kunde:'', lieferant:'', importland:'', produkt:'',
+  herkunftsland:'', pzn:'', darreichungsform:'', hersteller:'',
+  op:'', kuerzel1:'', kuerzel2:'', kuerzel_qk:''
+};
+const META_LABELS = [
+  ['we_datum','WE-Datum'],['kunde','Kunde'],['lieferant','Lieferant'],
+  ['importland','Importland'],['produkt','Produkt'],['herkunftsland','Herkunftsland'],
+  ['pzn','PZN'],['darreichungsform','Darreichungsform'],['hersteller','Hersteller'],
+  ['op','OP'],['kuerzel1','Kürzel MA 1'],['kuerzel2','Kürzel MA 2'],['kuerzel_qk','Kürzel MA QK']
+];
+
+// ─── Init ───────────────────────────────────────────────────────────────────
+window.onload = () => {
+  document.getElementById('key-input').value = apiKey;
+  buildMetaGrid();
+  updateHeader();
+};
+
+function saveKey(v) {
+  apiKey = v.trim();
+  localStorage.setItem('medscan_key', apiKey);
+}
+
+// ─── API ────────────────────────────────────────────────────────────────────
+async function callKI(messages) {
+  if (!apiKey) return { ok:false, error:'Kein API-Key eingetragen!' };
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body: JSON.stringify({ model:'claude-sonnet-4-6', max_tokens:1000, messages })
+    });
+    const data = await res.json();
+    if (!res.ok) return { ok:false, error:'[HTTP '+res.status+'] '+(data?.error?.message||JSON.stringify(data)) };
+    const text = (data.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('');
+    return { ok:true, text };
+  } catch(e) {
+    return { ok:false, error: e.message };
+  }
+}
+
+async function testApi() {
+  const s = document.getElementById('key-status');
+  s.innerHTML = '<span style="color:#60A5FA">⏳ Teste...</span>';
+  const r = await callKI([{role:'user',content:'Antworte mit dem Wort: OK'}]);
+  s.innerHTML = r.ok
+    ? '<span style="color:#22c55e">✅ Verbindung OK! Antwort: '+r.text+'</span>'
+    : '<span style="color:#fca5a5">❌ '+r.error+'</span>';
+}
+
+// ─── Tabs ───────────────────────────────────────────────────────────────────
+function showTab(id) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    if((i===0&&id==='scan')||(i===1&&id==='zaehlblatt'))t.classList.add('active');
+  });
+}
+
+// ─── Modus ──────────────────────────────────────────────────────────────────
+function setMode(m) {
+  mode = m;
+  document.getElementById('btn-einzel').classList.toggle('active', m==='einzel');
+  document.getElementById('btn-masse').classList.toggle('active', m==='masse');
+  document.getElementById('upload-zone').classList.toggle('masse', m==='masse');
+  document.getElementById('upload-ico').textContent = m==='masse'?'📦':'🖼️';
+  document.getElementById('upload-title').textContent = m==='masse'?'Karton-Foto auswählen':'Packungsfoto auswählen';
+  document.getElementById('upload-desc').textContent = m==='masse'?'KI erkennt Produkt und zählt alle Packungen':'JPG, PNG, WEBP – tippen oder klicken';
+  document.getElementById('live-toggle-wrap').style.display = m==='einzel'&&camStream?'flex':'none';
+  clearStatus();
+}
+
+// ─── Status ─────────────────────────────────────────────────────────────────
+function showStatus() { document.getElementById('status-box').classList.add('show'); }
+function clearStatus() {
+  document.getElementById('status-box').classList.remove('show');
+  setBusy(false);
+}
+function setStep(n, msg, type) {
+  showStatus();
+  [1,2,3].forEach(i=>{
+    const el=document.getElementById('step'+i);
+    const dot=el.querySelector('.step-dot');
+    el.classList.remove('active','done');
+    dot.classList.remove('active','done');
+    dot.textContent=i;
+    if(i<n){el.classList.add('done');dot.classList.add('done');dot.textContent='✓';}
+    else if(i===n){el.classList.add('active');dot.classList.add('active');}
+  });
+  const colors={loading:'#38BDF8',ok:'#22c55e',error:'#ef4444',warn:'#f59e0b'};
+  const c=colors[type]||colors.loading;
+  const box=document.getElementById('status-box');
+  box.style.borderColor=c+'60';
+  box.style.background=c+'08';
+  const sm=document.getElementById('status-msg');
+  sm.style.color=c;
+  sm.innerHTML=(type==='loading'?'<div class="spinner" style="border-color:'+c+'30;border-top-color:'+c+'"></div>':
+    type==='ok'?'<span>✅</span>':type==='error'?'<span>⚠️</span>':'<span>ℹ️</span>')+
+    '<span>'+msg+'</span>'+
+    (type!=='loading'?'<button onclick="clearStatus()" style="margin-left:auto;background:none;border:none;color:#64748B;cursor:pointer;font-size:16px">✕</button>':'');
+}
+function setBusy(b) {
+  busy=b;
+  document.getElementById('file-input').disabled=b;
+  document.getElementById('btn-cam-scan').disabled=b;
+  document.getElementById('upload-zone').classList.toggle('busy',b);
+}
+
+// ─── Kamera ─────────────────────────────────────────────────────────────────
+async function startCam() {
+  document.getElementById('cam-err').style.display='none';
+  try{
+    camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280}}});
+    const v=document.getElementById('video');
+    v.srcObject=camStream;
+    await v.play();
+    document.getElementById('cam-idle').style.display='none';
+    document.getElementById('btn-cam-start').style.display='none';
+    document.getElementById('btn-cam-scan').style.display='';
+    document.getElementById('btn-cam-stop').style.display='';
+    if(mode==='einzel'){
+      document.getElementById('scan-line').style.display='';
+      document.getElementById('live-toggle-wrap').style.display='flex';
+    }
+  }catch(e){
+    const msg=e.name==='NotAllowedError'?'Kamerazugriff verweigert':e.name==='NotFoundError'?'Keine Kamera gefunden':'Kamera-Fehler: '+e.name;
+    document.getElementById('cam-err').textContent='⚠️ '+msg+' – Bitte Foto-Upload nutzen';
+    document.getElementById('cam-err').style.display='';
+  }
+}
+function stopCam(){
+  if(camStream)camStream.getTracks().forEach(t=>t.stop());
+  camStream=null;
+  clearInterval(liveInterval);liveInterval=null;liveOn=false;
+  document.getElementById('live-toggle').classList.remove('on');
+  document.getElementById('cam-idle').style.display='';
+  document.getElementById('scan-line').style.display='none';
+  document.getElementById('cam-overlay').style.display='none';
+  document.getElementById('btn-cam-start').style.display='';
+  document.getElementById('btn-cam-scan').style.display='none';
+  document.getElementById('btn-cam-stop').style.display='none';
+  document.getElementById('live-toggle-wrap').style.display='none';
+  clearStatus();
+}
+function toggleLive(){
+  liveOn=!liveOn;
+  document.getElementById('live-toggle').classList.toggle('on',liveOn);
+  if(liveOn){
+    liveInterval=setInterval(()=>{if(!busy)camScan();},5000);
+  }else{
+    clearInterval(liveInterval);liveInterval=null;
+  }
+}
+function vidB64(){
+  const v=document.getElementById('video');
+  const c=document.createElement('canvas');
+  c.width=v.videoWidth;c.height=v.videoHeight;
+  c.getContext('2d').drawImage(v,0,0);
+  return c.toDataURL('image/jpeg',.85).split(',')[1];
+}
+async function camScan(){
+  if(busy||!camStream)return;
+  const b64=vidB64();
+  if(mode==='masse')pendingMassePrev='data:image/jpeg;base64,'+b64;
+  const ov=document.getElementById('cam-overlay');
+  ov.style.display='flex';
+  document.getElementById('cam-msg').style.color=mode==='masse'?'#4ADE80':'#38BDF8';
+  document.getElementById('cam-spinner').className='spinner lg'+(mode==='masse'?' green':'');
+  await doScan(b64,'image/jpeg');
+  ov.style.display='none';
+}
+
+// ─── File Upload ─────────────────────────────────────────────────────────────
+function getMediaType(file){
+  if(file.type&&file.type.startsWith('image/'))return file.type;
+  const ext=file.name.split('.').pop().toLowerCase();
+  return {png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',webp:'image/webp'}[ext]||'image/jpeg';
+}
+function fileToB64(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>res(r.result.split(',')[1]);
+    r.onerror=()=>rej(new Error('Lesen fehlgeschlagen'));
+    r.readAsDataURL(file);
+  });
+}
+async function handleFile(e){
+  const file=e.target.files?.[0];
+  if(!file||busy)return;
+  setBusy(true);setStep(1,'Bild wird geladen...','loading');
+  let b64;
+  try{b64=await fileToB64(file);}
+  catch(err){setStep(4,'❌ '+err.message,'error');setBusy(false);return;}
+  const mt=getMediaType(file);
+  const dataUrl='data:'+mt+';base64,'+b64;
+  if(mode==='masse'){pendingMassePrev=dataUrl;}
+  else{
+    document.getElementById('preview-img').src=dataUrl;
+    document.getElementById('upload-preview').style.display='';
+  }
+  e.target.value='';
+  await doScan(b64,mt);
+}
+
+// ─── Scan ────────────────────────────────────────────────────────────────────
+const P_EINZEL = "Analysiere diese Medikamentenpackung fuer pharmazeutische Inventur. Antworte NUR mit JSON ohne Markdown:\n{\"produkt\":\"Name\",\"wirkstoff\":\"Wirkstoff\",\"charge\":\"Charge\",\"verfall\":\"MM/YYYY\",\"anzahl_pro_karton\":0,\"hersteller\":\"Hersteller\",\"importland\":\"DE\",\"herkunftsland\":\"Deutschland\",\"pzn\":\"\",\"darreichungsform\":\"Tabletten\",\"op\":\"ja\",\"erkennungsqualitaet\":\"hoch\"}\nFalls kein Medikament: {\"fehler\":\"Kein Medikament\"}";
+const P_MASSE = "Zaehle alle Medikamentenpackungen in diesem Bild (Karton/Regal/Stapel). Antworte NUR mit JSON ohne Markdown:\n{\"produkt\":\"Name\",\"wirkstoff\":\"Wirkstoff\",\"charge\":\"\",\"verfall\":\"\",\"hersteller\":\"Hersteller\",\"importland\":\"DE\",\"herkunftsland\":\"Deutschland\",\"pzn\":\"\",\"darreichungsform\":\"Tabletten\",\"erkennungsqualitaet\":\"hoch\",\"gezaehlt\":0,\"anzahl_pro_karton\":0,\"zaehlung_sicher\":true,\"zaehlung_info\":\"Beschreibung\",\"mehrere_sorten\":false,\"sorten_info\":\"\"}\nFalls kein Medikament: {\"fehler\":\"Keine Medikamente\"}";
+
+async function doScan(b64, mt) {
+  setBusy(true);
+  setStep(2, mode==='masse'?'📦 KI zählt Packungen...':'🔍 KI analysiert Packung...', 'loading');
+  const isMasse = mode==='masse';
+  const res = await callKI([{
+    role:'user',
+    content:[
+      {type:'image',source:{type:'base64',media_type:mt,data:b64}},
+      {type:'text',text:isMasse?P_MASSE:P_EINZEL}
+    ]
+  }]);
+  if(!res.ok){setStep(3,'⚠️ '+res.error,'error');setBusy(false);return;}
+  let d;
+  try{
+    const clean=res.text.replace(/```json|```/gi,'').trim();
+    d=JSON.parse(clean);
+  }catch(e){setStep(3,'JSON-Fehler: '+e.message+' | '+res.text.slice(0,100),'error');setBusy(false);return;}
+  if(d.fehler){setStep(3,'⚠️ '+d.fehler,'error');setBusy(false);return;}
+  if(isMasse){
+    pendingMasse=d;
+    openModal(d);
+    setStep(3,'✅ '+(d.gezaehlt||'?')+' Packungen gezählt – bitte im Dialog prüfen','ok');
+  }else{
+    addZeile(d, d.anzahl_pro_karton||0);
+    setStep(3,'✅ '+d.produkt+' | Charge: '+(d.charge||'?')+' | Verfall: '+(d.verfall||'?'),'ok');
+    showTab('zaehlblatt');
+  }
+  setBusy(false);
+}
+
+function addZeile(d, summe, extras) {
+  const z={
+    id:Date.now()+(Math.random()*1000|0),
+    produkt:d.produkt||'',wirkstoff:d.wirkstoff||'',charge:d.charge||'',
+    verfall:d.verfall||'',anzahl_pro_karton:d.anzahl_pro_karton||0,
+    summe:summe||0,hersteller:d.hersteller||'',pzn:d.pzn||'',
+    darreichungsform:d.darreichungsform||'',importland:d.importland||'',
+    herkunftsland:d.herkunftsland||'',op:d.op||'',
+    erkennungsqualitaet:d.erkennungsqualitaet||'',bemerkung:'',
+    ...extras
+  };
+  if(!meta.produkt&&z.produkt)meta.produkt=z.produkt;
+  if(!meta.hersteller&&z.hersteller)meta.hersteller=z.hersteller;
+  if(!meta.importland&&z.importland)meta.importland=z.importland;
+  if(!meta.herkunftsland&&z.herkunftsland)meta.herkunftsland=z.herkunftsland;
+  if(!meta.pzn&&z.pzn)meta.pzn=z.pzn;
+  if(!meta.darreichungsform&&z.darreichungsform)meta.darreichungsform=z.darreichungsform;
+  if(!meta.op&&z.op)meta.op=z.op;
+  zeilen.push(z);
+  updateHeader();
+  renderZeilen();
+  renderMeta();
+}
+
+// ─── Modal ───────────────────────────────────────────────────────────────────
+function openModal(d) {
+  document.getElementById('modal-summe').value=d.gezaehlt||0;
+  document.getElementById('modal-pro').value=d.anzahl_pro_karton||0;
+  document.getElementById('modal-charge').value=d.charge||'';
+  document.getElementById('modal-verfall').value=d.verfall||'';
+  document.getElementById('modal-ki-count').textContent=d.gezaehlt??'-';
+  const zInfo=document.getElementById('modal-zaehlung');
+  zInfo.innerHTML='';
+  if(d.zaehlung_sicher===false)zInfo.innerHTML='<div class="alert alert-warn">⚠️ '+d.zaehlung_info+'</div>';
+  if(d.zaehlung_sicher===true)zInfo.innerHTML='<div class="alert alert-ok">✅ '+d.zaehlung_info+'</div>';
+  if(d.mehrere_sorten)zInfo.innerHTML+='<div class="alert alert-info">🔀 '+d.sorten_info+'</div>';
+  const pv=document.getElementById('modal-preview');
+  if(pendingMassePrev){pv.src=pendingMassePrev;pv.style.display='';}else pv.style.display='none';
+  document.getElementById('modal').classList.add('show');
+  document.getElementById('modal-box').querySelector('.btn.green').textContent='✅ '+document.getElementById('modal-summe').value+' Packungen übernehmen';
+}
+function adjSumme(d){
+  const el=document.getElementById('modal-summe');
+  el.value=Math.max(0,(+el.value||0)+d);
+  document.getElementById('modal-box').querySelector('.btn.green').textContent='✅ '+el.value+' Packungen übernehmen';
+}
+document.getElementById('modal-summe').addEventListener('input',function(){
+  document.getElementById('modal-box').querySelector('.btn.green').textContent='✅ '+this.value+' Packungen übernehmen';
+});
+function closeModal(){ document.getElementById('modal').classList.remove('show'); pendingMasse=null; pendingMassePrev=null; }
+function confirmMasse(){
+  if(!pendingMasse)return;
+  const d={...pendingMasse};
+  const summe=+document.getElementById('modal-summe').value||0;
+  d.anzahl_pro_karton=+document.getElementById('modal-pro').value||0;
+  d.charge=document.getElementById('modal-charge').value;
+  d.verfall=document.getElementById('modal-verfall').value;
+  addZeile(d, summe);
+  closeModal();
+  showTab('zaehlblatt');
+}
+
+// ─── Render ──────────────────────────────────────────────────────────────────
+function updateHeader(){
+  const t=zeilen.reduce((s,z)=>s+(+z.summe||0),0);
+  const hc=document.getElementById('hdr-count');
+  const be=document.getElementById('btn-export');
+  const be2=document.getElementById('btn-export2');
+  const zc=document.getElementById('zeilen-count');
+  hc.style.display=zeilen.length?'':'none';
+  be.style.display=zeilen.length?'':'none';
+  be2.style.display=zeilen.length?'':'none';
+  zc.style.display=zeilen.length?'':'none';
+  document.getElementById('total-count').textContent=t;
+  zc.textContent=zeilen.length;
+}
+function renderMeta(){
+  const g=document.getElementById('meta-grid');
+  g.innerHTML=META_LABELS.map(([f,l])=>
+    `<div><label class="lbl">${l}</label><input class="inp" value="${(meta[f]||'').replace(/"/g,'&quot;')}" oninput="meta['${f}']=this.value"></div>`
+  ).join('');
+}
+function buildMetaGrid(){ renderMeta(); }
+function renderZeilen(){
+  const empty=document.getElementById('zeilen-empty');
+  const wrap=document.getElementById('zeilen-table-wrap');
+  if(!zeilen.length){empty.style.display='';wrap.style.display='none';document.getElementById('sum-cell').textContent='';return;}
+  empty.style.display='none';wrap.style.display='';
+  const total=zeilen.reduce((s,z)=>s+(+z.summe||0),0);
+  document.getElementById('sum-cell').textContent=total;
+  document.getElementById('zeilen-tbody').innerHTML=zeilen.map((z,i)=>
+    `<tr>
+      <td style="color:#64748B;font-weight:700">${i+1}</td>
+      <td><div style="font-weight:600;color:#F0F9FF;font-size:12px">${z.produkt||'–'}</div><div style="font-size:11px;color:#60A5FA;margin-top:1px">${z.wirkstoff||'–'}</div></td>
+      <td><span style="font-family:monospace;color:#94A3B8;font-size:11px">${z.charge||'–'}</span></td>
+      <td><span style="color:#94A3B8;font-size:11px">${z.verfall||'–'}</span></td>
+      <td style="text-align:center;color:#94A3B8">${z.anzahl_pro_karton||0}</td>
+      <td><div style="display:flex;align-items:center;gap:4px;justify-content:center">
+        <button class="btn-sm" onclick="adjZeile(${z.id},-1)">−</button>
+        <span style="font-weight:800;color:#38BDF8;min-width:24px;text-align:center">${z.summe||0}</span>
+        <button class="btn-sm" onclick="adjZeile(${z.id},1)">+</button>
+      </div></td>
+      <td><span class="badge ${z.erkennungsqualitaet==='hoch'?'badge-hoch':z.erkennungsqualitaet==='mittel'?'badge-mittel':'badge-niedrig'}">${z.erkennungsqualitaet||'–'}</span></td>
+      <td><input class="inp" value="${(z.bemerkung||'').replace(/"/g,'&quot;')}" style="min-width:100px" oninput="zeilen.find(r=>r.id===${z.id}).bemerkung=this.value"></td>
+      <td><button class="btn-sm" style="background:#4B1818;color:#fca5a5" onclick="delZeile(${z.id})">🗑</button></td>
+    </tr>`
+  ).join('');
+}
+function adjZeile(id,d){
+  const z=zeilen.find(r=>r.id===id);
+  if(z){z.summe=Math.max(0,(+z.summe||0)+d);updateHeader();renderZeilen();}
+}
+function delZeile(id){
+  zeilen=zeilen.filter(r=>r.id!==id);
+  updateHeader();renderZeilen();
+}
+
+// ─── Excel Export ─────────────────────────────────────────────────────────────
+function exportExcel(){
+  const wb=XLSX.utils.book_new();
+  const ws={};const mrg=[];let r=0;
+  const M=(r1,c1,r2,c2)=>mrg.push({s:{r:r1,c:c1},e:{r:r2,c:c2}});
+  const C=(row,col,v,bold,bg)=>{
+    const a=XLSX.utils.encode_cell({r:row,c:col});
+    ws[a]={v:v??'',t:typeof v==='number'?'n':'s',s:{font:{name:'Arial',sz:10,bold:!!bold,color:{rgb:bold&&bg==='1F3864'?'FFFFFF':'000000'}},fill:bg?{fgColor:{rgb:bg},patternType:'solid'}:undefined,alignment:{wrapText:true,horizontal:'left',vertical:'center'},border:{top:{style:'thin',color:{rgb:'AAAAAA'}},bottom:{style:'thin',color:{rgb:'AAAAAA'}},left:{style:'thin',color:{rgb:'AAAAAA'}},right:{style:'thin',color:{rgb:'AAAAAA'}}}}};
+  };
+  C(r,0,'Zählblatt',true,'1F3864');M(r,0,r,9);r++;
+  C(r,0,'WE-Datum:',true,'D6E4F7');C(r,1,meta.we_datum);M(r,1,r,2);C(r,3,'PB / □',true,'D6E4F7');C(r,4,'');C(r,5,'Kunde:',true,'D6E4F7');C(r,6,meta.kunde);M(r,6,r,9);r++;
+  C(r,0,'Lieferant:',true,'D6E4F7');C(r,1,meta.lieferant);M(r,1,r,2);C(r,3,'Importland:',true,'D6E4F7');C(r,4,meta.importland);C(r,5,'Produkt:',true,'D6E4F7');C(r,6,meta.produkt);M(r,6,r,7);C(r,8,'OP:',true,'D6E4F7');C(r,9,meta.op);r++;
+  C(r,0,'Herkunftsland:',true,'D6E4F7');C(r,1,meta.herkunftsland);M(r,1,r,2);C(r,3,'PZN:',true,'D6E4F7');C(r,4,meta.pzn);C(r,5,'Darreichungsform:',true,'D6E4F7');C(r,6,meta.darreichungsform);M(r,6,r,7);C(r,8,'Hersteller:',true,'D6E4F7');C(r,9,meta.hersteller);r+=2;
+  ['Charge','Verfall','Anz./Karton','Summe','QK-Muster nötig?','QK-Freigabe','Bemerkung'].forEach((h,i)=>{
+    const a=XLSX.utils.encode_cell({r,c:i});
+    ws[a]={v:h,t:'s',s:{font:{name:'Arial',sz:9,bold:true,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'1F3864'},patternType:'solid'},alignment:{wrapText:true,horizontal:'center',vertical:'center'},border:{top:{style:'thin',color:{rgb:'000000'}},bottom:{style:'thin',color:{rgb:'000000'}},left:{style:'thin',color:{rgb:'000000'}},right:{style:'thin',color:{rgb:'000000'}}}}};
+  });r++;
+  zeilen.forEach((z,i)=>{
+    const bg=i%2===0?'FFFFFF':'EBF3FB';
+    [z.charge||'',z.verfall||'',z.anzahl_pro_karton||0,z.summe||0,'□ ja  □ nein','',z.bemerkung||''].forEach((v,ci)=>{
+      const a=XLSX.utils.encode_cell({r,c:ci});
+      ws[a]={v,t:typeof v==='number'?'n':'s',s:{font:{name:'Arial',sz:10},fill:{fgColor:{rgb:bg},patternType:'solid'},alignment:{horizontal:'center',vertical:'center'},border:{top:{style:'thin',color:{rgb:'CCCCCC'}},bottom:{style:'thin',color:{rgb:'CCCCCC'}},left:{style:'thin',color:{rgb:'CCCCCC'}},right:{style:'thin',color:{rgb:'CCCCCC'}}}}};
+    });r++;
+  });
+  const tot=zeilen.reduce((s,z)=>s+(+z.summe||0),0);
+  C(r,0,'Gesamt',true,'D6E4F7');M(r,0,r,2);
+  const sa=XLSX.utils.encode_cell({r,c:3});ws[sa]={v:tot,t:'n',s:{font:{name:'Arial',sz:12,bold:true,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'1F3864'},patternType:'solid'},alignment:{horizontal:'center'}}};r+=2;
+  C(r,0,'Bemerkungen:',true,'D6E4F7');M(r,0,r,9);r++;
+  ['□  Erstöffnungsschutz','□  Nur bei Nicht-Serialisierung: Kontrolle Erstöffnungsschutz / Siegel erfolgt.','□  Kontrolle der Packungen gegen Scan des Referenzmusters erfolgt.'].forEach(t=>{
+    const a=XLSX.utils.encode_cell({r,c:0});ws[a]={v:t,t:'s',s:{font:{name:'Arial',sz:10},fill:{fgColor:{rgb:'FAFAFA'},patternType:'solid'},alignment:{wrapText:true}}};M(r,0,r,9);r++;
+  });r++;
+  C(r,0,'Kürzel MA 1:',true,'D6E4F7');M(r,0,r,1);C(r,2,meta.kuerzel1);M(r,2,r,3);C(r,4,'Kürzel MA 2:',true,'D6E4F7');M(r,4,r,5);C(r,6,meta.kuerzel2);M(r,6,r,7);C(r,8,'Datum:',true,'D6E4F7');C(r,9,meta.we_datum);r++;
+  C(r,0,'Kürzel MA QK:',true,'D6E4F7');M(r,0,r,1);C(r,2,meta.kuerzel_qk);M(r,2,r,3);C(r,4,'Datum QK:',true,'D6E4F7');C(r,5,'');M(r,5,r,6);
+  const sa2=XLSX.utils.encode_cell({r,c:7});ws[sa2]={v:'Anlage 01 zur SOP QK-003',t:'s',s:{font:{name:'Arial',sz:9,color:{rgb:'888888'}}}};M(r,7,r,9);r++;
+  ws['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:r,c:9}});
+  ws['!merges']=mrg;
+  ws['!cols']=[{wch:14},{wch:12},{wch:14},{wch:10},{wch:18},{wch:26},{wch:22},{wch:12},{wch:14},{wch:16}];
+  XLSX.utils.book_append_sheet(wb,ws,'Zählblatt');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(zeilen.map((z,i)=>({'#':i+1,Produkt:z.produkt,Wirkstoff:z.wirkstoff,Charge:z.charge,Verfall:z.verfall,'Anz/Karton':z.anzahl_pro_karton,Summe:z.summe,Hersteller:z.hersteller,PZN:z.pzn,Darreichungsform:z.darreichungsform,Importland:z.importland,Herkunftsland:z.herkunftsland}))),'Rohdaten');
+  XLSX.writeFile(wb,'Zaehlblatt_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+</script>
+</body>
+</html>
