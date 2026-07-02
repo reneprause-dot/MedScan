@@ -290,28 +290,61 @@ tr:nth-child(even){background:#071020}
     <div class="modal-body">
       <img id="modal-preview" src="" style="width:100%;max-height:110px;object-fit:cover;border-radius:9px;border:1px solid #1E3A5F;margin-bottom:12px;display:none">
       <div id="modal-zaehlung" style="margin-bottom:12px"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-        <div>
-          <label class="lbl">Gesamtanzahl</label>
-          <div style="display:flex;gap:6px;align-items:center">
-            <button style="width:32px;height:32px;background:#1E3A5F;border:1px solid #2A4A7A;border-radius:7px;color:#E2EBF8;font-size:20px;cursor:pointer" onclick="adjSumme(-1)">−</button>
-            <input type="number" class="inp-lg" id="modal-summe" value="0" min="0">
-            <button style="width:32px;height:32px;background:#1E3A5F;border:1px solid #2A4A7A;border-radius:7px;color:#E2EBF8;font-size:20px;cursor:pointer" onclick="adjSumme(1)">+</button>
-          </div>
-          <div style="font-size:11px;color:#475569;margin-top:3px">KI zählte: <span id="modal-ki-count">-</span></div>
+      <!-- Sichtbare Packungen pro Lage -->
+      <div style="margin-bottom:14px">
+        <label class="lbl">Sichtbare Packungen (1 Lage / KI-Zählung)</label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button style="width:32px;height:32px;background:#1E3A5F;border:1px solid #2A4A7A;border-radius:7px;color:#E2EBF8;font-size:20px;cursor:pointer" onclick="adjSumme(-1)">−</button>
+          <input type="number" class="inp-lg" id="modal-summe" value="0" min="0" oninput="calcGesamt()">
+          <button style="width:32px;height:32px;background:#1E3A5F;border:1px solid #2A4A7A;border-radius:7px;color:#E2EBF8;font-size:20px;cursor:pointer" onclick="adjSumme(1)">+</button>
         </div>
-        <div>
-          <label class="lbl">Anz. pro Karton</label>
-          <input type="number" class="inp" id="modal-pro" value="0" min="0">
+        <div style="font-size:11px;color:#475569;margin-top:3px">KI zählte: <span id="modal-ki-count">-</span></div>
+      </div>
+
+      <!-- Mehrling-Toggle -->
+      <div style="background:#071020;border:1px solid #1E3A5F;border-radius:10px;padding:12px 14px;margin-bottom:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <div>
+            <div style="font-weight:700;color:#F0F9FF;font-size:13px">📦 Mehrling (mehrere Lagen)?</div>
+            <div style="font-size:11px;color:#64748B;margin-top:2px">Karton enthält übereinanderliegende Lagen</div>
+          </div>
+          <button class="toggle" id="mehrling-toggle" onclick="toggleMehrling()"><div class="toggle-dot"></div></button>
+        </div>
+        <div id="mehrling-panel" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid #1E3A5F">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px">
+            <div>
+              <label class="lbl">Anzahl Lagen</label>
+              <div style="display:flex;gap:6px;align-items:center">
+                <button style="width:30px;height:30px;background:#1E3A5F;border:1px solid #2A4A7A;border-radius:7px;color:#E2EBF8;font-size:18px;cursor:pointer" onclick="adjLagen(-1)">−</button>
+                <input type="number" class="inp" id="modal-lagen" value="2" min="1" style="text-align:center;font-size:18px;font-weight:700;color:#38BDF8" oninput="calcGesamt()">
+                <button style="width:30px;height:30px;background:#1E3A5F;border:1px solid #2A4A7A;border-radius:7px;color:#E2EBF8;font-size:18px;cursor:pointer" onclick="adjLagen(1)">+</button>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;justify-content:center;background:#0A2034;border-radius:8px;padding:8px 12px;text-align:center">
+              <div style="font-size:10px;color:#60A5FA;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">Berechnung</div>
+              <div style="font-size:12px;color:#94A3B8" id="rechnung-text">0 × 2 Lagen = 0</div>
+            </div>
+          </div>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+
+      <!-- Gesamtanzahl (Ergebnis) -->
+      <div style="background:#0A2034;border:2px solid #38BDF840;border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:11px;color:#60A5FA;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Gesamtanzahl Packungen</div>
+          <div style="font-size:10px;color:#475569;margin-top:1px" id="gesamt-formel">= Sichtbare Packungen</div>
+        </div>
+        <div style="font-size:32px;font-weight:900;color:#38BDF8" id="modal-gesamt">0</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+        <div><label class="lbl">Anz. pro Karton</label><input type="number" class="inp" id="modal-pro" value="0" min="0"></div>
         <div><label class="lbl">Charge</label><input class="inp" id="modal-charge" placeholder="Chargennummer"></div>
         <div><label class="lbl">Verfall (MM/YYYY)</label><input class="inp" id="modal-verfall" placeholder="07/2030"></div>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button class="btn-sm" onclick="closeModal()">Abbrechen</button>
-        <button class="btn green" onclick="confirmMasse()">✅ Übernehmen</button>
+        <button class="btn green" id="modal-confirm-btn" onclick="confirmMasse()">✅ 0 Packungen übernehmen</button>
       </div>
     </div>
   </div>
@@ -349,9 +382,11 @@ window.onload = () => {
 };
 
 function saveKey(v) {
-  apiKey = v.trim();
+  apiKey = v.trim().replace(/\s+/g,'');
   localStorage.setItem('medscan_key', apiKey);
 }
+// Trim on init
+if (apiKey) apiKey = apiKey.trim().replace(/\s+/g,'');
 
 // ─── API ────────────────────────────────────────────────────────────────────
 async function callKI(messages) {
@@ -368,7 +403,7 @@ async function callKI(messages) {
       body: JSON.stringify({ model:'claude-sonnet-4-6', max_tokens:1000, messages })
     });
     const data = await res.json();
-    if (!res.ok) return { ok:false, error:'[HTTP '+res.status+'] '+(data?.error?.message||JSON.stringify(data)) };
+    if (!res.ok) return { ok:false, error:'[HTTP '+res.status+' '+res.statusText+'] '+(data?.error?.message||data?.error?.type||JSON.stringify(data).slice(0,200)) };
     const text = (data.content||[]).filter(c=>c.type==='text').map(c=>c.text).join('');
     return { ok:true, text };
   } catch(e) {
@@ -378,11 +413,25 @@ async function callKI(messages) {
 
 async function testApi() {
   const s = document.getElementById('key-status');
-  s.innerHTML = '<span style="color:#60A5FA">⏳ Teste...</span>';
+  const key = apiKey.trim();
+  if (!key) { s.innerHTML = '<span style="color:#fca5a5">❌ Bitte zuerst einen API-Key eingeben</span>'; return; }
+  if (!key.startsWith('sk-ant-')) { s.innerHTML = '<span style="color:#f59e0b">⚠️ Key sollte mit "sk-ant-" beginnen – bitte prüfen</span>'; }
+  s.innerHTML = '<span style="color:#60A5FA">⏳ Verbinde mit Anthropic API...</span>';
   const r = await callKI([{role:'user',content:'Antworte mit dem Wort: OK'}]);
-  s.innerHTML = r.ok
-    ? '<span style="color:#22c55e">✅ Verbindung OK! Antwort: '+r.text+'</span>'
-    : '<span style="color:#fca5a5">❌ '+r.error+'</span>';
+  if (r.ok) {
+    s.innerHTML = '<span style="color:#22c55e">✅ API funktioniert! Antwort: '+r.text+'</span>';
+  } else {
+    let hint = '';
+    if (r.error.includes('401') || r.error.includes('authentication'))
+      hint = '<br>→ Key ungültig oder abgelaufen. Neuen Key unter console.anthropic.com erstellen.';
+    else if (r.error.includes('403'))
+      hint = '<br>→ Kein Zugriff. Bitte Billing unter console.anthropic.com aktivieren (Zahlungsmethode hinterlegen).';
+    else if (r.error.includes('Load') || r.error.includes('fetch') || r.error.includes('network') || r.error.includes('Failed'))
+      hint = '<br>→ Netzwerkfehler / CORS. Stelle sicher dass die Seite über HTTPS aufgerufen wird (nicht file://).';
+    s.innerHTML = '<div style="color:#fca5a5;font-weight:600">❌ Fehler: '+r.error+'</div>'
+      + '<div style="color:#94A3B8;font-size:11px;margin-top:4px;font-family:monospace;background:#071020;padding:6px 8px;border-radius:6px;word-break:break-all">Key (erste 20 Zeichen): '+key.slice(0,20)+'...</div>'
+      + (hint ? '<div style="color:#f59e0b;font-size:12px;margin-top:5px">'+hint+'</div>' : '');
+  }
 }
 
 // ─── Tabs ───────────────────────────────────────────────────────────────────
@@ -600,11 +649,16 @@ function addZeile(d, summe, extras) {
 
 // ─── Modal ───────────────────────────────────────────────────────────────────
 function openModal(d) {
-  document.getElementById('modal-summe').value=d.gezaehlt||0;
-  document.getElementById('modal-pro').value=d.anzahl_pro_karton||0;
-  document.getElementById('modal-charge').value=d.charge||'';
-  document.getElementById('modal-verfall').value=d.verfall||'';
-  document.getElementById('modal-ki-count').textContent=d.gezaehlt??'-';
+  mehrlingAktiv = false;
+  document.getElementById('mehrling-toggle').classList.remove('on');
+  document.getElementById('mehrling-panel').style.display = 'none';
+  document.getElementById('modal-lagen').value = 2;
+  document.getElementById('modal-summe').value = d.gezaehlt || 0;
+  document.getElementById('modal-pro').value = d.anzahl_pro_karton || 0;
+  document.getElementById('modal-charge').value = d.charge || '';
+  document.getElementById('modal-verfall').value = d.verfall || '';
+  document.getElementById('modal-ki-count').textContent = d.gezaehlt ?? '-';
+  calcGesamt();
   const zInfo=document.getElementById('modal-zaehlung');
   zInfo.innerHTML='';
   if(d.zaehlung_sicher===false)zInfo.innerHTML='<div class="alert alert-warn">⚠️ '+d.zaehlung_info+'</div>';
@@ -615,23 +669,56 @@ function openModal(d) {
   document.getElementById('modal').classList.add('show');
   document.getElementById('modal-box').querySelector('.btn.green').textContent='✅ '+document.getElementById('modal-summe').value+' Packungen übernehmen';
 }
-function adjSumme(d){
-  const el=document.getElementById('modal-summe');
-  el.value=Math.max(0,(+el.value||0)+d);
-  document.getElementById('modal-box').querySelector('.btn.green').textContent='✅ '+el.value+' Packungen übernehmen';
+let mehrlingAktiv = false;
+
+function calcGesamt() {
+  const sichtbar = +document.getElementById('modal-summe').value || 0;
+  const lagen = mehrlingAktiv ? (+document.getElementById('modal-lagen').value || 1) : 1;
+  const gesamt = sichtbar * lagen;
+  document.getElementById('modal-gesamt').textContent = gesamt;
+  document.getElementById('modal-confirm-btn').textContent = '✅ ' + gesamt + ' Packungen übernehmen';
+  if (mehrlingAktiv) {
+    document.getElementById('rechnung-text').textContent = sichtbar + ' × ' + lagen + ' Lagen = ' + gesamt;
+    document.getElementById('gesamt-formel').textContent = '= ' + sichtbar + ' × ' + lagen + ' Lagen';
+  } else {
+    document.getElementById('gesamt-formel').textContent = '= Sichtbare Packungen';
+  }
 }
-document.getElementById('modal-summe').addEventListener('input',function(){
-  document.getElementById('modal-box').querySelector('.btn.green').textContent='✅ '+this.value+' Packungen übernehmen';
-});
-function closeModal(){ document.getElementById('modal').classList.remove('show'); pendingMasse=null; pendingMassePrev=null; }
-function confirmMasse(){
-  if(!pendingMasse)return;
-  const d={...pendingMasse};
-  const summe=+document.getElementById('modal-summe').value||0;
-  d.anzahl_pro_karton=+document.getElementById('modal-pro').value||0;
-  d.charge=document.getElementById('modal-charge').value;
-  d.verfall=document.getElementById('modal-verfall').value;
-  addZeile(d, summe);
+function adjSumme(d) {
+  const el = document.getElementById('modal-summe');
+  el.value = Math.max(0, (+el.value || 0) + d);
+  calcGesamt();
+}
+function adjLagen(d) {
+  const el = document.getElementById('modal-lagen');
+  el.value = Math.max(1, (+el.value || 1) + d);
+  calcGesamt();
+}
+function toggleMehrling() {
+  mehrlingAktiv = !mehrlingAktiv;
+  document.getElementById('mehrling-toggle').classList.toggle('on', mehrlingAktiv);
+  document.getElementById('mehrling-panel').style.display = mehrlingAktiv ? '' : 'none';
+  calcGesamt();
+}
+function closeModal() {
+  document.getElementById('modal').classList.remove('show');
+  pendingMasse = null; pendingMassePrev = null;
+  mehrlingAktiv = false;
+  document.getElementById('mehrling-toggle').classList.remove('on');
+  document.getElementById('mehrling-panel').style.display = 'none';
+}
+function confirmMasse() {
+  if (!pendingMasse) return;
+  const d = {...pendingMasse};
+  const sichtbar = +document.getElementById('modal-summe').value || 0;
+  const lagen = mehrlingAktiv ? (+document.getElementById('modal-lagen').value || 1) : 1;
+  const gesamt = sichtbar * lagen;
+  d.anzahl_pro_karton = +document.getElementById('modal-pro').value || 0;
+  d.charge = document.getElementById('modal-charge').value;
+  d.verfall = document.getElementById('modal-verfall').value;
+  d.mehrling_lagen = mehrlingAktiv ? lagen : 1;
+  d.mehrling_pro_lage = sichtbar;
+  addZeile(d, gesamt);
   closeModal();
   showTab('zaehlblatt');
 }
@@ -670,7 +757,10 @@ function renderZeilen(){
       <td><div style="font-weight:600;color:#F0F9FF;font-size:12px">${z.produkt||'–'}</div><div style="font-size:11px;color:#60A5FA;margin-top:1px">${z.wirkstoff||'–'}</div></td>
       <td><span style="font-family:monospace;color:#94A3B8;font-size:11px">${z.charge||'–'}</span></td>
       <td><span style="color:#94A3B8;font-size:11px">${z.verfall||'–'}</span></td>
-      <td style="text-align:center;color:#94A3B8">${z.anzahl_pro_karton||0}</td>
+      <td style="text-align:center;color:#94A3B8">
+        ${z.anzahl_pro_karton||0}
+        ${z.mehrling_lagen>1?'<div style="font-size:10px;color:#a78bfa;margin-top:1px">'+z.mehrling_pro_lage+' × '+z.mehrling_lagen+' Lagen</div>':''}
+      </td>
       <td><div style="display:flex;align-items:center;gap:4px;justify-content:center">
         <button class="btn-sm" onclick="adjZeile(${z.id},-1)">−</button>
         <span style="font-weight:800;color:#38BDF8;min-width:24px;text-align:center">${z.summe||0}</span>
@@ -729,7 +819,7 @@ function exportExcel(){
   ws['!merges']=mrg;
   ws['!cols']=[{wch:14},{wch:12},{wch:14},{wch:10},{wch:18},{wch:26},{wch:22},{wch:12},{wch:14},{wch:16}];
   XLSX.utils.book_append_sheet(wb,ws,'Zählblatt');
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(zeilen.map((z,i)=>({'#':i+1,Produkt:z.produkt,Wirkstoff:z.wirkstoff,Charge:z.charge,Verfall:z.verfall,'Anz/Karton':z.anzahl_pro_karton,Summe:z.summe,Hersteller:z.hersteller,PZN:z.pzn,Darreichungsform:z.darreichungsform,Importland:z.importland,Herkunftsland:z.herkunftsland}))),'Rohdaten');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(zeilen.map((z,i)=>({'#':i+1,Produkt:z.produkt,Wirkstoff:z.wirkstoff,Charge:z.charge,Verfall:z.verfall,'Anz/Karton':z.anzahl_pro_karton,Summe:z.summe,Mehrling:z.mehrling_lagen>1?'Ja':'Nein','Lagen':z.mehrling_lagen||1,'Pro Lage':z.mehrling_pro_lage||z.summe,Hersteller:z.hersteller,PZN:z.pzn,Darreichungsform:z.darreichungsform,Importland:z.importland,Herkunftsland:z.herkunftsland}))),'Rohdaten');
   XLSX.writeFile(wb,'Zaehlblatt_'+new Date().toISOString().slice(0,10)+'.xlsx');
 }
 </script>
